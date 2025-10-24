@@ -109,12 +109,22 @@ def normalize_path(
     return path or "/"
 
 
+def is_media_url(url: str) -> bool:
+    """Check if the URL points to a media file based on its extension."""
+    media_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp',
+                        '.mp4', '.mp3', '.avi', '.mov', '.wmv', '.flv', '.mkv',
+                        '.ogg', '.wav', '.flac', '.aac', '.webm'}
+    parsed = urlparse(url)
+    return any(parsed.path.lower().endswith(ext) for ext in media_extensions)
+
+
 def gather_all_urls_from_sitemap(
     sitemap_url: str,
     visited: Set[str] = None,
 ) -> Set[str]:
     """
-    Recursively gather all <loc> URLs from a sitemap or sitemap index.
+    Recursively gather all <loc> URLs from a sitemap or sitemap index,
+    excluding media URLs.
     """
     if visited is None:
         visited = set()
@@ -143,10 +153,10 @@ def gather_all_urls_from_sitemap(
             urls |= gather_all_urls_from_sitemap(loc, visited)
     elif is_urlset(root):
         # Collect URLs
-        urls |= set(iter_loc_values(root))
+        urls |= {url for url in iter_loc_values(root) if not is_media_url(url)}
     else:
         # Unknown root — try to collect any <loc> anyway
-        locs = set(iter_loc_values(root))
+        locs = {url for url in iter_loc_values(root) if not is_media_url(url)}
         if locs:
             urls |= locs
         else:
